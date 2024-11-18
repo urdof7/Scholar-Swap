@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { TextInput, Button, View, Text, StyleSheet } from "react-native";
 
-export default function search() {
+export default function Search() {
   const [query, setQuery] = useState("");
   const [priceRange, setPriceRange] = useState([0, 100]);
 

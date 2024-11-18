@@ -1,14 +1,47 @@
-import React, { useState } from 'react';
-import { TextInput, Button, View, Text, StyleSheet } from 'react-native';
+import React, { useContext, useState, useEffect } from 'react';
+import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity } from 'react-native';
+import { AuthContext } from '../AuthContext';
+import { useGoogleLogin } from '@react-oauth/google';
 
-export default function login({ navigation }) {
+export default function Login({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const { signIn } = useContext(AuthContext); // Auth context
+  const [user, setUser] = useState(null);
+
+  const googleLogin = useGoogleLogin({
+    onSuccess: (response) => {
+      setUser(response);
+      console.log('Google Login Success:', response);
+    },
+    onError: (error) => console.log('Google Login Failed:', error),
+  });
+
+  useEffect(() => {
+    if (user) {
+      fetch(`https://www.googleapis.com/oauth2/v1/userinfo?access_token=${user.access_token}`, {
+        headers: {
+          Authorization: `Bearer ${user.access_token}`,
+          Accept: 'application/json',
+        },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          console.log('Google User Profile:', data);
+          signIn(); // Update global sign-in state
+          navigation.navigate('Home'); // Navigate to Home screen
+        })
+        .catch((err) => console.log('Error fetching user info:', err));
+    }
+  }, [user, navigation, signIn]);
 
   const handleLogin = () => {
-    console.log(`Login with: ${email}, ${password}`);
-    // Replace this with real login logic, e.g. API calls
-    navigation.navigate('Home');
+    if (email === 'test@example.com' && password === 'password') {
+      signIn(); // Update global sign-in state
+      navigation.navigate('Home'); // Navigate to Home screen
+    } else {
+      console.log('Invalid credentials');
+    }
   };
 
   return (
@@ -30,10 +63,15 @@ export default function login({ navigation }) {
         onChangeText={(text) => setPassword(text)}
       />
       <Button title="Login" onPress={handleLogin} />
-      <Text style={styles.linkText} onPress={() => console.log('Forgot Password')}>
-        Forgot Password?
-      </Text>
-      <Text style={styles.linkText} onPress={() => navigation.navigate('SignUp')}>
+
+      <TouchableOpacity style={styles.googleButton} onPress={googleLogin}>
+        <Text style={styles.googleButtonText}>Sign in with Google</Text>
+      </TouchableOpacity>
+
+      <Text
+        style={styles.linkText}
+        onPress={() => navigation.navigate('Signup')}
+      >
         Don't have an account? Sign Up
       </Text>
     </View>
@@ -61,6 +99,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     color: '#FFD700',
     marginBottom: 15,
+  },
+  googleButton: {
+    marginTop: 20,
+    backgroundColor: '#4285F4',
+    borderRadius: 5,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  googleButtonText: {
+    color: '#fff',
+    fontSize: 16,
   },
   linkText: {
     color: '#FFD700',

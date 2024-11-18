@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import { googleLogout, useGoogleLogin } from "@react-oauth/google";
-import FrontPage from "./components/frontpage.jsx";
-import Home from "./components/home.jsx";
-import Search from "./components/search.jsx";
+import FrontPage from "./componentsUpdated/frontpage.jsx";
+import Home from "./componentsUpdated/home.jsx";
+import Search from "./componentsUpdated/search.jsx";
 // These are the old components from two weeks ago, the new components are componentsUpdated. It just needs to be switched to that for navigation
 //However, this navigation is in react web routing while the new components are in react native. I keep running into this error. 
 
@@ -52,9 +52,15 @@ function AppMain() {
         <h2>Scholar Swap</h2>
       </nav>
       <Routes>
-        <Route path="/" element={<FrontPage onLogin={login} />} />
+        {/* <Route path="/" element={<FrontPage onLogin={login} />} />
         <Route path="/home" element={<Home profile={profile} logOut={logOut} isLoggedIn={isLoggedIn} />} />
-        <Route path="/search" element={<Search isLoggedIn={isLoggedIn} />} />
+        <Route path="/search" element={<Search isLoggedIn={isLoggedIn} />} /> */}
+
+  <Route path="/" element={<div>FrontPage Placeholder</div>} />
+  <Route path="/home" element={<div>Home Placeholder</div>} />
+  <Route path="/search" element={<div>Search Placeholder</div>} />
+
+
       </Routes>
     </div>
   );

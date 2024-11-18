@@ -1,34 +1,40 @@
 import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
+import { AuthProvider } from './AuthContext';
+import { GoogleOAuthProvider } from "@react-oauth/google"
 
-// Import your components
-import home from "./screens/home"; // Ensure the path is correct
-import search from "./screens/search"; // Ensure this component exists
-import profile from "./screens/profile";
-import product from "./screens/product";
-import signup from "./screens/signup";
-import transaction from "./screens/transactions";
-import notifications from "./screens/notifications";
-import login from "./screens/login";
-import frontpage from "./app";
+// Import your screens
+import Home from "./screens/home";
+import Search from "./screens/search";
+import Profile from "./screens/profile";
+import Product from "./screens/product";
+import Signup from "./screens/signup";
+import Transaction from "./screens/transactions";
+import Notifications from "./screens/notifications";
+import Login from "./screens/login";
+import FrontPage from "./screens/frontpage";
 
 const Stack = createStackNavigator();
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="frontpage">
-        <Stack.Screen name="frontpage" component={frontpage}/>
-        <Stack.Screen name="profile" component={profile} />
-        <Stack.Screen name="product" component={product} />
-        <Stack.Screen name="home" component={home} />
-        <Stack.Screen name="search" component={search} />
-        <Stack.Screen name="signup" component={signup} />
-        <Stack.Screen name="transaction" component={transaction} />
-        <Stack.Screen name="login" component={login} />
-        <Stack.Screen name="notifications" component={notifications} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <GoogleOAuthProvider clientId="101931362137-hm7advb6q9ndkvh9re5d7nj9317h5sm8.apps.googleusercontent.com">
+    <AuthProvider>
+      <NavigationContainer>
+        <Stack.Navigator initialRouteName="Login">
+          <Stack.Screen name="FrontPage" component={FrontPage} />
+          <Stack.Screen name="Profile" component={Profile} />
+          <Stack.Screen name="Product" component={Product} />
+          <Stack.Screen name="Home" component={Home} />
+          <Stack.Screen name="Search" component={Search} />
+          <Stack.Screen name="Signup" component={Signup} />
+          <Stack.Screen name="Transaction" component={Transaction} />
+          <Stack.Screen name="Login" component={Login} />
+          <Stack.Screen name="Notifications" component={Notifications} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </AuthProvider>
+    </GoogleOAuthProvider>
   );
 }

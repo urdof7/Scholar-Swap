@@ -25,6 +25,10 @@ export default function Home() {
         <Text style={styles.buttonText}>Notifications</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('UploadProduct')}>
+        <Text style={styles.buttonText}>Upload a Product</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity style={styles.logoutButton} onPress={() => navigation.navigate('Login')}>
         <Text style={styles.buttonText}>Logout</Text>
       </TouchableOpacity>

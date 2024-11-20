@@ -14,6 +14,7 @@ import Transaction from "./screens/transactions";
 import Notifications from "./screens/notifications";
 import Login from "./screens/login";
 import FrontPage from "./screens/frontpage";
+import UploadProductPage from "./screens/UploadProductPage";
 
 const Stack = createStackNavigator();
 
@@ -32,6 +33,7 @@ export default function App() {
           <Stack.Screen name="Transaction" component={Transaction} />
           <Stack.Screen name="Login" component={Login} />
           <Stack.Screen name="Notifications" component={Notifications} />
+          <Stack.Screen name="UploadProduct" component={UploadProductPage} />
         </Stack.Navigator>
       </NavigationContainer>
     </AuthProvider>

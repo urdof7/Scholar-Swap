@@ -34,6 +34,7 @@ export default function Profile({ navigation }) {
   const [confirmNewPassword, setConfirmNewPassword] = useState(''); // For confirm new password
   const [errorMessage, setErrorMessage] = useState(''); // For error messages
   const [successMessage, setSuccessMessage] = useState(''); // For success messages
+  const [profilePicture, setProfilePicture] = useState(''); // For profile picture URL
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -49,6 +50,7 @@ export default function Profile({ navigation }) {
           setFirstName(data.firstName || '');
           setLastName(data.lastName || '');
           setAcademicYear(data.academicYear || 'Freshman');
+          setProfilePicture(data.profilePicture || '');
         } else {
           console.log('No user data found in Firestore.');
         }
@@ -174,7 +176,9 @@ export default function Profile({ navigation }) {
           <Image
             style={styles.profileImage}
             source={{
-              uri: 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png',
+              uri:
+                profilePicture ||
+                'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png',
             }}
           />
           {!isEditingProfile && !isChangingPassword && (
@@ -480,15 +484,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, // Reduced padding to give more space
     borderRadius: 5,
     marginRight: 10,
-    flex: 1, 
+    flex: 1,
   },
   cancelButton: {
     backgroundColor: '#dc3545', // Red
     paddingVertical: 10,
     paddingHorizontal: 10, // Reduced padding to give more space
     borderRadius: 5,
-    flex: 1, 
-  },  
+    flex: 1,
+  },
   editButton: {
     backgroundColor: '#007bff', // Blue
     paddingVertical: 10,

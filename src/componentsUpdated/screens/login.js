@@ -17,6 +17,19 @@ import {
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "../../firebase";
 
+const DEFAULT_PROFILE_PICTURE = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
+
+// Helper function to split full name into first and last names
+const splitName = (fullName) => {
+  if (!fullName) return { firstName: "", lastName: "" };
+  
+  const nameParts = fullName.trim().split(" ");
+  const firstName = nameParts.shift();
+  const lastName = nameParts.join(" ");
+  
+  return { firstName, lastName };
+};
+
 export default function Login({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -52,13 +65,8 @@ export default function Login({ navigation }) {
       const userDoc = await getDoc(userDocRef);
 
       if (!userDoc.exists()) {
-        console.log("Creating Firestore document for email/password user...");
-        await setDoc(userDocRef, {
-          email: user.email,
-          academicYear: null, // Set to null
-          createdAt: new Date(),
-        });
-        console.log("Firestore document created successfully!");
+        console.log("Firestore document does not exist for email/password user. This should have been created during signup.");
+        // Optionally, navigate to a profile setup screen or notify the user
       } else {
         console.log("Firestore document already exists for:", user.email);
       }
@@ -115,10 +123,16 @@ export default function Login({ navigation }) {
 
         if (!userDoc.exists()) {
           console.log("Creating Firestore document for Google user...");
+          
+          // Split displayName into firstName and lastName
+          const displayName = user.displayName || "";
+          const { firstName, lastName } = splitName(displayName);
+
           await setDoc(userDocRef, {
             email: user.email,
-            name: user.displayName,
-            profilePicture: user.photoURL,
+            firstName: firstName,
+            lastName: lastName,
+            profilePicture: user.photoURL || DEFAULT_PROFILE_PICTURE, // Use Google profile picture or default
             academicYear: null, // Set to null
             createdAt: new Date(),
           });

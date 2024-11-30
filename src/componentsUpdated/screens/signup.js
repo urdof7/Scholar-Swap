@@ -22,6 +22,9 @@ export default function Signup({ navigation }) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
+  // Default Profile Picture URL
+  const DEFAULT_PROFILE_PICTURE = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
+
   // Handle Sign Up button press
   const handleSignUp = async () => {
     if (
@@ -50,12 +53,13 @@ export default function Signup({ navigation }) {
       );
       const user = userCredential.user;
 
-      // Store additional user data in Firestore
+      // Store additional user data in Firestore with default profile picture
       await setDoc(doc(db, 'users', user.uid), {
         firstName,
         lastName,
         academicYear,
         email,
+        profilePicture: DEFAULT_PROFILE_PICTURE, // Set to default profile picture
         createdAt: new Date(),
       });
 

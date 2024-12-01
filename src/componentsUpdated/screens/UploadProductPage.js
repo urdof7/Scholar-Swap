@@ -28,6 +28,7 @@ const UploadProductPage = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const [price, setPrice] = useState(""); // Added price state
   const [imageFile, setImageFile] = useState(null);
 
   const [openConfirmation, setOpenConfirmation] = useState(false);
@@ -57,8 +58,15 @@ const UploadProductPage = () => {
     console.log("Starting product upload...");
 
     // Validate that all fields are filled
-    if (!title || !description || !category || !imageFile) {
+    if (!title || !description || !category || !imageFile || !price) {
       alert("Please fill in all fields.");
+      return;
+    }
+
+    // Validate price is a positive number
+    const priceValue = parseFloat(price);
+    if (isNaN(priceValue) || priceValue <= 0) {
+      alert("Please enter a valid price greater than 0.");
       return;
     }
 
@@ -88,6 +96,7 @@ const UploadProductPage = () => {
         description: description,
         image: imageUrl,
         category: category,
+        price: priceValue, // Added price field
         status: "available",
         postedAt: Timestamp.now(),
         purchasedAt: null,
@@ -101,6 +110,7 @@ const UploadProductPage = () => {
       setTitle("");
       setDescription("");
       setCategory("");
+      setPrice(""); // Reset price field
       setImageFile(null);
     } catch (error) {
       console.error("Error uploading product:", error);
@@ -193,38 +203,6 @@ const UploadProductPage = () => {
               variant="h3"
               sx={{ color: "#FFD700", fontFamily: "Poppins, Helvetica" }}
             >
-              Product Description
-            </Typography>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="50 words maximum"
-              multiline
-              rows={4}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              sx={{
-                mt: 2,
-                backgroundColor: "#333",
-                borderRadius: "10px",
-                "& .MuiOutlinedInput-root": {
-                  "& fieldset": {
-                    border: "none",
-                  },
-                },
-                "& .MuiInputBase-input": { color: "#CCCCCC" },
-                "& .MuiInputBase-input::placeholder": { color: "#CCCCCC" },
-              }}
-              InputProps={{
-                style: { color: "#CCCCCC" },
-              }}
-            />
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Typography
-              variant="h3"
-              sx={{ color: "#FFD700", fontFamily: "Poppins, Helvetica" }}
-            >
               Product Category
             </Typography>
             <FormControl
@@ -271,12 +249,44 @@ const UploadProductPage = () => {
               variant="h3"
               sx={{ color: "#FFD700", fontFamily: "Poppins, Helvetica" }}
             >
+              Price
+            </Typography>
+            <TextField
+              fullWidth
+              variant="outlined"
+              type="number"
+              placeholder="Enter price"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              sx={{
+                mt: 2,
+                backgroundColor: "#333",
+                borderRadius: "10px",
+                "& .MuiOutlinedInput-root": {
+                  "& fieldset": {
+                    border: "none",
+                  },
+                },
+                "& .MuiInputBase-input": { color: "#CCCCCC" },
+                "& .MuiInputBase-input::placeholder": { color: "#CCCCCC" },
+              }}
+              InputProps={{
+                style: { color: "#CCCCCC" },
+                inputProps: { min: 0, step: "0.01" }, // To allow decimal values
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Typography
+              variant="h3"
+              sx={{ color: "#FFD700", fontFamily: "Poppins, Helvetica" }}
+            >
               Upload Photos
             </Typography>
             <Paper
               elevation={3}
               sx={{
-                mt: 2,
+                mt: 2,ß
                 p: 4,
                 backgroundColor: "#333",
                 borderRadius: "10px",
@@ -315,6 +325,38 @@ const UploadProductPage = () => {
                 </>
               )}
             </Paper>
+          </Grid>
+          <Grid item xs={12}>
+            <Typography
+              variant="h3"
+              sx={{ color: "#FFD700", fontFamily: "Poppins, Helvetica" }}
+            >
+              Product Description
+            </Typography>
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder="50 words maximum"
+              multiline
+              rows={4}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              sx={{
+                mt: 2,
+                backgroundColor: "#333",
+                borderRadius: "10px",
+                "& .MuiOutlinedInput-root": {
+                  "& fieldset": {
+                    border: "none",
+                  },
+                },
+                "& .MuiInputBase-input": { color: "#CCCCCC" },
+                "& .MuiInputBase-input::placeholder": { color: "#CCCCCC" },
+              }}
+              InputProps={{
+                style: { color: "#CCCCCC" },
+              }}
+            />
           </Grid>
         </Grid>
 

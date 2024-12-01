@@ -20,6 +20,7 @@ import {
   onSnapshot,
   doc,
   getDoc,
+  setDoc,
   serverTimestamp,
   updateDoc,
 } from 'firebase/firestore';
@@ -90,34 +91,87 @@ export default function Chat({ route, navigation }) {
     return () => unsubscribe();
   }, [currentUserId, conversationId]);
 
-  // Update read_time for received messages
+  // Update read_time for received messages and reset unread count
   useEffect(() => {
-    const updateReadTime = async () => {
-      messages.forEach(async (message) => {
+    const updateReadTimeAndUnreadCount = async () => {
+      if (!conversationId || !currentUserId) return;
+
+      // Update read_time for messages
+      for (const message of messages) {
         if (message.receiver_id === currentUserId && !message.read_time) {
           const messageRef = doc(db, 'messages', message.id);
           await updateDoc(messageRef, {
             read_time: serverTimestamp(),
           });
         }
-      });
+      }
+
+      // Reset unread count in conversation document
+      const conversationRef = doc(db, 'conversations', conversationId);
+      const conversationDoc = await getDoc(conversationRef);
+
+      if (conversationDoc.exists()) {
+        const data = conversationDoc.data();
+        const unreadCountField =
+          data.user1_id === currentUserId ? 'unread_count_user1' : 'unread_count_user2';
+        await updateDoc(conversationRef, {
+          [unreadCountField]: 0,
+        });
+      }
     };
-    updateReadTime();
-  }, [messages, currentUserId]);
+    updateReadTimeAndUnreadCount();
+  }, [messages, currentUserId, conversationId]);
 
   // Send a new message
   const sendMessage = async () => {
     if (messageText.trim() === '') return;
 
+    const newMessage = {
+      sender_id: currentUserId,
+      receiver_id: otherUserId,
+      message: messageText,
+      sent_time: serverTimestamp(),
+      read_time: null,
+      conversationId: conversationId,
+    };
+
     try {
-      await addDoc(collection(db, 'messages'), {
-        sender_id: currentUserId,
-        receiver_id: otherUserId,
-        message: messageText,
-        sent_time: serverTimestamp(),
-        read_time: null,
-        conversationId: conversationId,
-      });
+      // Add message to messages collection
+      await addDoc(collection(db, 'messages'), newMessage);
+
+      // Update or create conversation document
+      const conversationRef = doc(db, 'conversations', conversationId);
+      const conversationDoc = await getDoc(conversationRef);
+
+      const currentTime = serverTimestamp();
+
+      if (conversationDoc.exists()) {
+        // Update existing conversation
+        const data = conversationDoc.data();
+        const unreadCountField =
+          data.user1_id === otherUserId ? 'unread_count_user1' : 'unread_count_user2';
+        await updateDoc(conversationRef, {
+          last_message: messageText,
+          last_message_time: currentTime,
+          [unreadCountField]: data[unreadCountField] + 1,
+        });
+      } else {
+        // Create new conversation
+        const user1_id = currentUserId < otherUserId ? currentUserId : otherUserId;
+        const user2_id = currentUserId > otherUserId ? currentUserId : otherUserId;
+        const unread_count_user1 = user1_id === otherUserId ? 1 : 0;
+        const unread_count_user2 = user2_id === otherUserId ? 1 : 0;
+        await setDoc(conversationRef, {
+          user1_id,
+          user2_id,
+          userIds: [user1_id, user2_id],
+          last_message: messageText,
+          last_message_time: currentTime,
+          unread_count_user1,
+          unread_count_user2,
+        });
+      }
+
       setMessageText('');
     } catch (error) {
       console.error('Error sending message:', error);
@@ -171,25 +225,19 @@ export default function Chat({ route, navigation }) {
         <View
           style={[
             styles.messageContainer,
-            isCurrentUser
-              ? styles.currentUserContainer
-              : styles.otherUserContainer,
+            isCurrentUser ? styles.currentUserContainer : styles.otherUserContainer,
           ]}
         >
           <View
             style={[
               styles.messageBubble,
-              isCurrentUser
-                ? styles.currentUserBubble
-                : styles.otherUserBubble,
+              isCurrentUser ? styles.currentUserBubble : styles.otherUserBubble,
             ]}
           >
             <Text
               style={[
                 styles.messageText,
-                isCurrentUser
-                  ? styles.currentUserText
-                  : styles.otherUserText,
+                isCurrentUser ? styles.currentUserText : styles.otherUserText,
               ]}
             >
               {item.message}

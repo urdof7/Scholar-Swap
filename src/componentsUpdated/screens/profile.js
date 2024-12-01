@@ -1,4 +1,5 @@
-// Import necessary modules
+// Profile.js
+
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -20,6 +21,8 @@ import {
   query,
   where,
   getDocs,
+  orderBy,
+  onSnapshot,
 } from 'firebase/firestore';
 import {
   onAuthStateChanged,
@@ -51,6 +54,8 @@ export default function Profile({ navigation }) {
   const [activeTab, setActiveTab] = useState('listed'); // For tab switching
 
   const [logoUrl, setLogoUrl] = useState(null); // For logo image URL
+
+  const [conversations, setConversations] = useState([]); // For chats
 
   useEffect(() => {
     // Fetch logo URL from Firebase Storage
@@ -126,8 +131,54 @@ export default function Profile({ navigation }) {
         }
       };
 
+      // Fetch conversations
+      const fetchConversations = () => {
+        const conversationsRef = collection(db, 'conversations');
+        const q = query(
+          conversationsRef,
+          where('userIds', 'array-contains', user.uid),
+          orderBy('last_message_time', 'desc')
+        );
+
+        const unsubscribe = onSnapshot(q, async (querySnapshot) => {
+          const convos = [];
+          for (const docSnap of querySnapshot.docs) {
+            const data = docSnap.data();
+            let otherUserId;
+            let unreadCountField;
+            if (data.user1_id === user.uid) {
+              otherUserId = data.user2_id;
+              unreadCountField = 'unread_count_user1';
+            } else {
+              otherUserId = data.user1_id;
+              unreadCountField = 'unread_count_user2';
+            }
+            // Fetch other user's name
+            const otherUserDocRef = doc(db, 'users', otherUserId);
+            const otherUserDoc = await getDoc(otherUserDocRef);
+            const otherUserData = otherUserDoc.exists()
+              ? otherUserDoc.data()
+              : { firstName: 'Unknown', lastName: 'User' };
+            convos.push({
+              id: docSnap.id,
+              otherUserId,
+              otherUserName: `${otherUserData.firstName} ${otherUserData.lastName}`,
+              lastMessage: data.last_message,
+              lastMessageTime: data.last_message_time,
+              unreadCount: data[unreadCountField] || 0,
+            });
+          }
+          setConversations(convos);
+        });
+
+        return () => {
+          unsubscribe();
+        };
+      };
+
       fetchListedProducts();
       fetchOrderHistory();
+      fetchConversations();
     }
   }, [user]);
 
@@ -423,12 +474,32 @@ export default function Profile({ navigation }) {
         {/* Chat Section */}
         <View style={styles.chatSection}>
           <Text style={styles.sectionTitle}>Chats</Text>
-          {['Johnny', 'Emma', 'Brayden', 'Thomas'].map((name) => (
-            <View key={name} style={styles.chatItem}>
-              <Text style={styles.chatName}>{name}</Text>
-              <Text style={styles.chatTime}>5:50 pm</Text>
-            </View>
-          ))}
+          {conversations.length > 0 ? (
+            conversations.map((convo) => (
+              <TouchableOpacity
+                key={convo.id}
+                style={styles.chatItem}
+                onPress={() =>
+                  navigation.navigate('Chat', { otherUserId: convo.otherUserId })
+                }
+              >
+                <View style={styles.chatInfo}>
+                  <Text style={styles.chatName}>{convo.otherUserName}</Text>
+                  {convo.unreadCount > 0 && <View style={styles.unreadDot} />}
+                </View>
+                <Text style={styles.chatTime}>
+                  {convo.lastMessageTime
+                    ? convo.lastMessageTime.toDate().toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : ''}
+                </Text>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <Text style={styles.noChatsText}>No conversations yet.</Text>
+          )}
         </View>
 
         {/* Tabs for Listed Products and Order History */}
@@ -660,7 +731,14 @@ const styles = StyleSheet.create({
   chatItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 5,
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomColor: '#444',
+    borderBottomWidth: 1,
+  },
+  chatInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   chatName: {
     fontSize: 16,
@@ -669,6 +747,18 @@ const styles = StyleSheet.create({
   chatTime: {
     fontSize: 14,
     color: '#777',
+  },
+  unreadDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#FFD700',
+    marginLeft: 10,
+  },
+  noChatsText: {
+    color: '#AAA',
+    textAlign: 'center',
+    marginTop: 10,
   },
   tabContainer: {
     flexDirection: 'row',

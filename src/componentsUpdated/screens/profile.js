@@ -11,7 +11,15 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { auth, db } from '../../firebase'; // Adjust the import path as needed
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import {
+  doc,
+  getDoc,
+  updateDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+} from 'firebase/firestore';
 import {
   onAuthStateChanged,
   updateEmail,
@@ -35,6 +43,10 @@ export default function Profile({ navigation }) {
   const [errorMessage, setErrorMessage] = useState(''); // For error messages
   const [successMessage, setSuccessMessage] = useState(''); // For success messages
   const [profilePicture, setProfilePicture] = useState(''); // For profile picture URL
+
+  const [listedProducts, setListedProducts] = useState([]); // Products where seller_id == user.uid
+  const [orderHistory, setOrderHistory] = useState([]); // Products where buyer_id == user.uid
+  const [activeTab, setActiveTab] = useState('listed'); // For tab switching
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -61,6 +73,45 @@ export default function Profile({ navigation }) {
 
     return () => unsubscribe();
   }, [navigation]);
+
+  useEffect(() => {
+    if (user) {
+      // Fetch listed products
+      const fetchListedProducts = async () => {
+        try {
+          const productsRef = collection(db, 'products');
+          const q = query(productsRef, where('seller_id', '==', user.uid));
+          const querySnapshot = await getDocs(q);
+          const products = [];
+          querySnapshot.forEach((doc) => {
+            products.push({ id: doc.id, ...doc.data() });
+          });
+          setListedProducts(products);
+        } catch (error) {
+          console.error('Error fetching listed products:', error);
+        }
+      };
+
+      // Fetch order history
+      const fetchOrderHistory = async () => {
+        try {
+          const productsRef = collection(db, 'products');
+          const q = query(productsRef, where('buyer_id', '==', user.uid));
+          const querySnapshot = await getDocs(q);
+          const orders = [];
+          querySnapshot.forEach((doc) => {
+            orders.push({ id: doc.id, ...doc.data() });
+          });
+          setOrderHistory(orders);
+        } catch (error) {
+          console.error('Error fetching order history:', error);
+        }
+      };
+
+      fetchListedProducts();
+      fetchOrderHistory();
+    }
+  }, [user]);
 
   const handleSaveProfile = async () => {
     setErrorMessage('');
@@ -357,28 +408,73 @@ export default function Profile({ navigation }) {
 
         {/* Tabs for Listed Products and Order History */}
         <View style={styles.tabContainer}>
-          <Text style={[styles.tab, styles.activeTab]}>Your Listed Products</Text>
-          <Text style={styles.tab}>Your Order History</Text>
+          <TouchableOpacity onPress={() => setActiveTab('listed')}>
+            <Text style={[styles.tab, activeTab === 'listed' && styles.activeTab]}>
+              Your Listed Products
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setActiveTab('orders')}>
+            <Text style={[styles.tab, activeTab === 'orders' && styles.activeTab]}>
+              Your Order History
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Product Listings */}
         <View style={styles.productList}>
-          {Array(5)
-            .fill()
-            .map((_, index) => (
-              <View key={index} style={styles.productItem}>
-                <Image
-                  style={styles.productImage}
-                  source={{
-                    uri: 'https://www.example.com/product-image.png', // Replace with a valid product image URL
-                  }}
-                />
-                <View style={styles.productDetails}>
-                  <Text style={styles.productName}>Product Name</Text>
-                  <Text style={styles.productPrice}>$9.99</Text>
+          {activeTab === 'listed' ? (
+            listedProducts.length > 0 ? (
+              listedProducts.map((product) => (
+                <View key={product.id} style={styles.productItem}>
+                  {product.image && (
+                    <Image style={styles.productImage} source={{ uri: product.image }} />
+                  )}
+                  <View style={styles.productDetails}>
+                    <Text style={styles.productName}>{product.title}</Text>
+                    <Text style={styles.productPrice}>
+                      ${product.price ? product.price.toFixed(2) : 'N/A'}
+                    </Text>
+                    <Text style={styles.productStatus}>Status: {product.status}</Text>
+                  </View>
                 </View>
+              ))
+            ) : (
+              <View style={styles.placeholderContainer}>
+                <Text style={styles.placeholderText}>
+                  You haven't listed any products yet -{' '}
+                </Text>
+                <TouchableOpacity onPress={() => navigation.navigate('UploadProductPage')}>
+                  <Text style={styles.linkText}>List a Product</Text>
+                </TouchableOpacity>
               </View>
-            ))}
+            )
+          ) : activeTab === 'orders' ? (
+            orderHistory.length > 0 ? (
+              orderHistory.map((order) => (
+                <View key={order.id} style={styles.productItem}>
+                  {order.image && (
+                    <Image style={styles.productImage} source={{ uri: order.image }} />
+                  )}
+                  <View style={styles.productDetails}>
+                    <Text style={styles.productName}>{order.title}</Text>
+                    <Text style={styles.productPrice}>
+                      ${order.price ? order.price.toFixed(2) : 'N/A'}
+                    </Text>
+                    <Text style={styles.productStatus}>Status: {order.status}</Text>
+                  </View>
+                </View>
+              ))
+            ) : (
+              <View style={styles.placeholderContainer}>
+                <Text style={styles.placeholderText}>
+                  You haven't ordered any products yet -{' '}
+                </Text>
+                <TouchableOpacity onPress={() => navigation.navigate('FrontPage')}>
+                  <Text style={styles.linkText}>Browse Products</Text>
+                </TouchableOpacity>
+              </View>
+            )
+          ) : null}
         </View>
 
         {/* Sign-Out Button */}
@@ -476,12 +572,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 20,
-    width: '15%',
+    width: '100%',
   },
   saveButton: {
     backgroundColor: '#28a745', // Green
     paddingVertical: 10,
-    paddingHorizontal: 10, // Reduced padding to give more space
+    paddingHorizontal: 10,
     borderRadius: 5,
     marginRight: 10,
     flex: 1,
@@ -489,7 +585,7 @@ const styles = StyleSheet.create({
   cancelButton: {
     backgroundColor: '#dc3545', // Red
     paddingVertical: 10,
-    paddingHorizontal: 10, // Reduced padding to give more space
+    paddingHorizontal: 10,
     borderRadius: 5,
     flex: 1,
   },
@@ -590,6 +686,27 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 14,
     color: '#AAA',
+  },
+  productStatus: {
+    fontSize: 14,
+    color: '#AAA',
+  },
+  placeholderContainer: {
+    alignItems: 'center',
+    marginTop: 20,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  placeholderText: {
+    fontSize: 16,
+    color: '#AAA',
+    textAlign: 'center',
+  },
+  linkText: {
+    fontSize: 16,
+    color: '#FFD700',
+    textDecorationLine: 'underline',
   },
   signOutButton: {
     backgroundColor: '#dc3545', // Red

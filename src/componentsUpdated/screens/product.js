@@ -1,3 +1,5 @@
+// product.js
+
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -7,7 +9,6 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import { db } from '../../firebase'; // Adjust the path if necessary
 import { doc, getDoc } from 'firebase/firestore';
 
@@ -56,7 +57,9 @@ export default function Product({ route, navigation }) {
 
         <TouchableOpacity
           style={styles.button}
-          onPress={() => console.log('Messaging Seller')}
+          onPress={() =>
+            navigation.navigate('Chat', { otherUserId: product.seller_id })
+          }
         >
           <Text style={styles.buttonText}>Message Seller</Text>
         </TouchableOpacity>
@@ -75,7 +78,7 @@ export default function Product({ route, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#0D0D0D', // Original dark background
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -83,7 +86,7 @@ const styles = StyleSheet.create({
   productContainer: {
     marginBottom: 30,
     padding: 15,
-    backgroundColor: '#333',
+    backgroundColor: '#1C1C1C', // Original dark gray container
     borderRadius: 10,
     width: '100%',
     alignItems: 'center',
@@ -97,25 +100,25 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#FFD700',
+    color: '#FFD700', // Yellow text
     marginBottom: 10,
     textAlign: 'center',
   },
   productDescription: {
     fontSize: 16,
-    color: '#FFF',
+    color: '#FFF', // White text
     marginBottom: 10,
     textAlign: 'center',
   },
   productPrice: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFD700',
+    color: '#FFD700', // Yellow text
     marginBottom: 20,
     textAlign: 'center',
   },
   button: {
-    backgroundColor: '#FFD700',
+    backgroundColor: '#FFD700', // Yellow button
     paddingVertical: 15,
     paddingHorizontal: 50,
     borderRadius: 25,
@@ -124,7 +127,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buyButton: {
-    backgroundColor: '#FF4500',
+    backgroundColor: '#FF4500', // Orange button
     paddingVertical: 15,
     paddingHorizontal: 50,
     borderRadius: 25,
@@ -133,12 +136,12 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 18,
-    color: '#000',
+    color: '#000', // Black text
     fontWeight: 'bold',
   },
   loadingText: {
     fontSize: 24,
-    color: '#FFD700',
+    color: '#FFD700', // Yellow text
     textAlign: 'center',
   },
 });

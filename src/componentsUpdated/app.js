@@ -15,6 +15,7 @@ import Notifications from "./screens/notifications";
 import Login from "./screens/login";
 import FrontPage from "./screens/frontpage";
 import UploadProductPage from "./screens/UploadProductPage";
+import Chat from "./screens/chat.js"
 
 const Stack = createStackNavigator();
 
@@ -34,6 +35,7 @@ export default function App() {
           <Stack.Screen name="Login" component={Login} />
           <Stack.Screen name="Notifications" component={Notifications} />
           <Stack.Screen name="UploadProduct" component={UploadProductPage} />
+          <Stack.Screen name="Chat" component={Chat} />
         </Stack.Navigator>
       </NavigationContainer>
     </AuthProvider>

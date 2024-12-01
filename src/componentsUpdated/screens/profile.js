@@ -668,7 +668,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 20,
-    width: '100%',
+    width: '15%',
   },
   saveButton: {
     backgroundColor: '#28a745', // Green

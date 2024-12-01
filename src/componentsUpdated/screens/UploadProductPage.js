@@ -286,7 +286,7 @@ const UploadProductPage = () => {
             <Paper
               elevation={3}
               sx={{
-                mt: 2,ß
+                mt: 2,
                 p: 4,
                 backgroundColor: "#333",
                 borderRadius: "10px",

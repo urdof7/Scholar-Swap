@@ -1,11 +1,9 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getFirestore } from "firebase/firestore"
+import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth"; // Import Firebase Auth
-import 'firebase/storage';
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getStorage } from "firebase/storage"; // Import Firebase Storage
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -16,12 +14,15 @@ const firebaseConfig = {
   storageBucket: "scholar-swap-439312.appspot.com",
   messagingSenderId: "101931362137",
   appId: "1:101931362137:web:6ce3f3a29f465fc9858e48",
-  measurementId: "G-KJ53HFVD5T"
+  measurementId: "G-KJ53HFVD5T",
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
-const db = getFirestore(app)
+const db = getFirestore(app); // Initialize Firestore
 const auth = getAuth(app); // Initialize Auth
-export { db, auth }; // Export both Firestore and Auth
+const storage = getStorage(app); // Initialize Storage
+
+// Export Firestore, Auth, and Storage
+export { db, auth, storage };

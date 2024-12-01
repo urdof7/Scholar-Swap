@@ -1,73 +1,124 @@
-import FacebookIcon from "@mui/icons-material/Facebook";
-import InstagramIcon from "@mui/icons-material/Instagram";
-import LinkedInIcon from "@mui/icons-material/LinkedIn";
-import PinterestIcon from "@mui/icons-material/Pinterest";
-import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import TwitterIcon from "@mui/icons-material/Twitter";
+import React, { useState } from "react";
 import UploadIcon from "@mui/icons-material/Upload";
 import {
   Box,
   Button,
   Container,
   Grid,
-  IconButton,
-  List,
-  ListItem,
-  ListItemText,
   Paper,
   TextField,
   Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  CircularProgress,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
-import React from "react";
+import { auth, db, storage } from "../../firebase"; // Adjusted import path
+import { collection, addDoc, Timestamp } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const UploadProductPage = () => {
+  // State hooks for form fields
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
+  const [imageFile, setImageFile] = useState(null);
+
+  const [openConfirmation, setOpenConfirmation] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  // Get the current user
+  const user = auth.currentUser;
+
+  // Handle Finish button click
+  const handleFinish = async () => {
+    // Validate that all fields are filled
+    if (!title || !description || !category || !imageFile) {
+      alert("Please fill in all fields.");
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      // Upload image to Firebase Storage
+      const storageRef = ref(storage, `products/${imageFile.name}_${Date.now()}`);
+      await uploadBytes(storageRef, imageFile);
+      const imageUrl = await getDownloadURL(storageRef);
+
+      // Create product document in Firestore
+      await addDoc(collection(db, "products"), {
+        seller_id: user.uid,
+        buyer_id: null,
+        title: title,
+        description: description,
+        image: imageUrl,
+        category: category,
+        status: "available", // Added status field
+        postedAt: Timestamp.now(),
+        purchasedAt: null,
+      });
+
+      setUploading(false);
+      setOpenConfirmation(true);
+      // Reset the form fields
+      setTitle("");
+      setDescription("");
+      setCategory("");
+      setImageFile(null);
+    } catch (error) {
+      console.error("Error uploading product:", error);
+      alert("Error uploading product. Please try again.");
+      setUploading(false);
+    }
+  };
+
+  // Handle the confirmation dialog close
+  const handleCloseConfirmation = () => {
+    setOpenConfirmation(false);
+  };
+
+  // Category options
+  const categories = [
+    "Textbooks",
+    "Lecture Notes",
+    "Past Exams",
+    "Lab Manuals",
+    "eBooks",
+    "Other",
+  ];
+
   return (
-    <Box sx={{ backgroundColor: "#333333", minHeight: "100vh", py: 4 }}>
+    <Box sx={{ backgroundColor: "#0D0D0D", minHeight: "100vh", py: 4 }}>
       <Container maxWidth="xl">
+        {/* Header Bar */}
         <Box
           sx={{
-            backgroundColor: "#090a0e",
-            borderRadius: 2,
+            backgroundColor: "#1C1C1C",
             p: 2,
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
+            justifyContent: "center",
+            borderRadius: 2,
           }}
         >
-          <img
-            src="https://via.placeholder.com/337x350"
-            alt="Untitled design"
-            style={{ width: 337, height: 350, objectFit: "cover" }}
-          />
-          <Box sx={{ display: "flex", gap: 4 }}>
-            <Typography
-              variant="h1"
-              sx={{ color: "#fbdc6a", fontFamily: "Quicksand, Helvetica" }}
-            >
-              Buy
-            </Typography>
-            <Typography
-              variant="h1"
-              sx={{ color: "#fbdc6a", fontFamily: "Quicksand, Helvetica" }}
-            >
-              Sell
-            </Typography>
-            <Typography
-              variant="h1"
-              sx={{ color: "#fbdc6a", fontFamily: "Quicksand, Helvetica" }}
-            >
-              About Us
-            </Typography>
-          </Box>
-          <IconButton>
-            <ShoppingCartIcon sx={{ color: "#fbdc6a", fontSize: 70 }} />
-          </IconButton>
+          <Typography
+            variant="h4"
+            sx={{ color: "#FFD700", fontFamily: "Quicksand, Helvetica" }}
+          >
+            Scholar Swap
+          </Typography>
         </Box>
 
         <Typography
           variant="h2"
           sx={{
-            color: "#fbdc6a",
+            color: "#FFD700",
             textAlign: "center",
             mt: 6,
             fontFamily: "Poppins, Helvetica",
@@ -80,7 +131,7 @@ const UploadProductPage = () => {
           <Grid item xs={12} md={6}>
             <Typography
               variant="h3"
-              sx={{ color: "#fbdc6a", fontFamily: "Poppins, Helvetica" }}
+              sx={{ color: "#FFD700", fontFamily: "Poppins, Helvetica" }}
             >
               Product Title
             </Typography>
@@ -88,13 +139,29 @@ const UploadProductPage = () => {
               fullWidth
               variant="outlined"
               placeholder="Text here"
-              sx={{ mt: 2, backgroundColor: "#d9d9d9", borderRadius: 2 }}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              sx={{
+                mt: 2,
+                backgroundColor: "#333",
+                borderRadius: "10px",
+                "& .MuiOutlinedInput-root": {
+                  "& fieldset": {
+                    border: "none",
+                  },
+                },
+                "& .MuiInputBase-input": { color: "#CCCCCC" },
+                "& .MuiInputBase-input::placeholder": { color: "#CCCCCC" },
+              }}
+              InputProps={{
+                style: { color: "#CCCCCC" },
+              }}
             />
           </Grid>
           <Grid item xs={12} md={6}>
             <Typography
               variant="h3"
-              sx={{ color: "#fbdc6a", fontFamily: "Poppins, Helvetica" }}
+              sx={{ color: "#FFD700", fontFamily: "Poppins, Helvetica" }}
             >
               Product Description
             </Typography>
@@ -104,27 +171,75 @@ const UploadProductPage = () => {
               placeholder="50 words maximum"
               multiline
               rows={4}
-              sx={{ mt: 2, backgroundColor: "#d9d9d9", borderRadius: 2 }}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              sx={{
+                mt: 2,
+                backgroundColor: "#333",
+                borderRadius: "10px",
+                "& .MuiOutlinedInput-root": {
+                  "& fieldset": {
+                    border: "none",
+                  },
+                },
+                "& .MuiInputBase-input": { color: "#CCCCCC" },
+                "& .MuiInputBase-input::placeholder": { color: "#CCCCCC" },
+              }}
+              InputProps={{
+                style: { color: "#CCCCCC" },
+              }}
             />
           </Grid>
           <Grid item xs={12} md={6}>
             <Typography
               variant="h3"
-              sx={{ color: "#fbdc6a", fontFamily: "Poppins, Helvetica" }}
+              sx={{ color: "#FFD700", fontFamily: "Poppins, Helvetica" }}
             >
               Product Category
             </Typography>
-            <TextField
+            <FormControl
               fullWidth
-              variant="outlined"
-              placeholder="Select one"
-              sx={{ mt: 2, backgroundColor: "#d9d9d9", borderRadius: 2 }}
-            />
+              sx={{
+                mt: 2,
+                backgroundColor: "#333",
+                borderRadius: "10px",
+                "& .MuiInputBase-root": {
+                  color: "#CCCCCC",
+                },
+                "& .MuiInputLabel-root": {
+                  color: "#CCCCCC",
+                },
+                "& .MuiSvgIcon-root": {
+                  color: "#CCCCCC",
+                },
+              }}
+            >
+              <InputLabel id="category-label" sx={{ color: "#CCCCCC" }}>
+                Select one
+              </InputLabel>
+              <Select
+                labelId="category-label"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                label="Select one"
+                sx={{
+                  "& fieldset": {
+                    border: "none",
+                  },
+                }}
+              >
+                {categories.map((cat) => (
+                  <MenuItem key={cat} value={cat}>
+                    {cat}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
           <Grid item xs={12} md={6}>
             <Typography
               variant="h3"
-              sx={{ color: "#fbdc6a", fontFamily: "Poppins, Helvetica" }}
+              sx={{ color: "#FFD700", fontFamily: "Poppins, Helvetica" }}
             >
               Upload Photos
             </Typography>
@@ -133,12 +248,42 @@ const UploadProductPage = () => {
               sx={{
                 mt: 2,
                 p: 4,
-                backgroundColor: "#d9d9d9",
-                borderRadius: 2,
+                backgroundColor: "#333",
+                borderRadius: "10px",
                 textAlign: "center",
+                position: "relative",
               }}
             >
-              <UploadIcon sx={{ fontSize: 70 }} />
+              <input
+                accept="image/*"
+                type="file"
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  opacity: 0,
+                  cursor: "pointer",
+                }}
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setImageFile(e.target.files[0]);
+                  }
+                }}
+              />
+              {imageFile ? (
+                <Typography sx={{ color: "#CCCCCC" }}>
+                  {imageFile.name}
+                </Typography>
+              ) : (
+                <>
+                  <UploadIcon sx={{ fontSize: 70, color: "#CCCCCC" }} />
+                  <Typography sx={{ color: "#CCCCCC" }}>
+                    Click to upload
+                  </Typography>
+                </>
+              )}
             </Paper>
           </Grid>
         </Grid>
@@ -146,165 +291,57 @@ const UploadProductPage = () => {
         <Box sx={{ display: "flex", gap: 2, mt: 4 }}>
           <Button
             variant="contained"
-            sx={{ backgroundColor: "#d9d9d9", color: "black", borderRadius: 2 }}
+            disabled={uploading}
+            sx={{
+              backgroundColor: "#FFD700",
+              color: "#000",
+              borderRadius: 2,
+              "&:hover": {
+                backgroundColor: "#FFC700",
+              },
+            }}
+            onClick={() => {
+              // Optionally reset form or navigate to another page
+              setTitle("");
+              setDescription("");
+              setCategory("");
+              setImageFile(null);
+            }}
           >
             Upload more products
           </Button>
           <Button
             variant="contained"
-            sx={{ backgroundColor: "#d9d9d9", color: "black", borderRadius: 2 }}
+            onClick={handleFinish}
+            disabled={uploading}
+            sx={{
+              backgroundColor: "#FFD700",
+              color: "#000",
+              borderRadius: 2,
+              "&:hover": {
+                backgroundColor: "#FFC700",
+              },
+            }}
           >
-            Finish
+            {uploading ? <CircularProgress size={24} /> : "Finish"}
           </Button>
         </Box>
 
-        <Grid container spacing={4} sx={{ mt: 6 }}>
-          <Grid item xs={12} md={3}>
-            <Typography
-              variant="h4"
-              sx={{ color: "#404145", fontFamily: "Poppins, Helvetica" }}
-            >
-              Info
-            </Typography>
-            <List>
-              {[
-                "About Us",
-                "Support",
-                "Blog",
-                "Download Apps",
-                "The Slack App",
-                "Partnerships",
-                "Affiliate Program",
-              ].map((text) => (
-                <ListItem button key={text}>
-                  <ListItemText
-                    primary={text}
-                    sx={{ color: "#7a7d85", textDecoration: "underline" }}
-                  />
-                </ListItem>
-              ))}
-            </List>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Typography
-              variant="h4"
-              sx={{ color: "#404145", fontFamily: "Poppins, Helvetica" }}
-            >
-              Features
-            </Typography>
-            <List>
-              {[
-                "Invoicing",
-                "Task Management",
-                "Contracts",
-                "Payments",
-                "Recurring payments",
-                "Expense Tracking",
-                "Reports",
-                "Proposals",
-                "Time Tracking",
-              ].map((text) => (
-                <ListItem button key={text}>
-                  <ListItemText
-                    primary={text}
-                    sx={{ color: "#7a7d85", textDecoration: "underline" }}
-                  />
-                </ListItem>
-              ))}
-            </List>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Typography
-              variant="h4"
-              sx={{ color: "#404145", fontFamily: "Poppins, Helvetica" }}
-            >
-              Tools
-            </Typography>
-            <List>
-              {[
-                "Free Invoice Templates",
-                "Free Invoice Generator",
-                "Free Invoicing Guide",
-                "Self Employment Tax Calculator",
-                "Quarterly Tax Calculator",
-                "Business Name Generator",
-              ].map((text) => (
-                <ListItem button key={text}>
-                  <ListItemText
-                    primary={text}
-                    sx={{ color: "#7a7d85", textDecoration: "underline" }}
-                  />
-                </ListItem>
-              ))}
-            </List>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Typography
-              variant="h4"
-              sx={{ color: "#404145", fontFamily: "Poppins, Helvetica" }}
-            >
-              Helpful Links
-            </Typography>
-            <List>
-              {[
-                "Williams & Harricks",
-                "Anywhere Workers",
-                "Freshbooks Alternative",
-                "Quickbooks Alternative",
-                "Harvest Alternative",
-                "Wave Apps Alternative",
-                "Design DB",
-              ].map((text) => (
-                <ListItem button key={text}>
-                  <ListItemText
-                    primary={text}
-                    sx={{ color: "#7a7d85", textDecoration: "underline" }}
-                  />
-                </ListItem>
-              ))}
-            </List>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Typography
-              variant="h4"
-              sx={{ color: "#404145", fontFamily: "Poppins, Helvetica" }}
-            >
-              Policies
-            </Typography>
-            <List>
-              {["Terms of Service", "Privacy Policy"].map((text) => (
-                <ListItem button key={text}>
-                  <ListItemText
-                    primary={text}
-                    sx={{ color: "#7a7d85", textDecoration: "underline" }}
-                  />
-                </ListItem>
-              ))}
-            </List>
-          </Grid>
-        </Grid>
-
-        <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
-          <IconButton>
-            <TwitterIcon sx={{ color: "#7a7d85" }} />
-          </IconButton>
-          <IconButton>
-            <FacebookIcon sx={{ color: "#7a7d85" }} />
-          </IconButton>
-          <IconButton>
-            <LinkedInIcon sx={{ color: "#7a7d85" }} />
-          </IconButton>
-          <IconButton>
-            <PinterestIcon sx={{ color: "#7a7d85" }} />
-          </IconButton>
-          <IconButton>
-            <InstagramIcon sx={{ color: "#7a7d85" }} />
-          </IconButton>
-        </Box>
+        {/* Confirmation Dialog */}
+        <Dialog open={openConfirmation} onClose={handleCloseConfirmation}>
+          <DialogTitle>Product Uploaded</DialogTitle>
+          <DialogContent>
+            <Typography>Your product has been uploaded successfully.</Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseConfirmation} color="primary">
+              OK
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Container>
     </Box>
   );
 };
 
 export default UploadProductPage;
-

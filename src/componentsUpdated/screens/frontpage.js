@@ -1,3 +1,4 @@
+// Import necessary modules
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -7,16 +8,30 @@ import {
   ScrollView,
   Image,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { db } from "../../firebase";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { auth, db, storage } from "../../firebase"; // Adjust the import path as needed
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  doc,
+  getDoc,
+} from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
+import { ref, getDownloadURL } from "firebase/storage";
 
 export default function FrontPage() {
   const navigation = useNavigation();
   const [products, setProducts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const [user, setUser] = useState(null);
+  const [profilePicture, setProfilePicture] = useState(null);
+  const [logoUrl, setLogoUrl] = useState(null);
 
   // Adjusted categories to match the UploadProductPage
   const categories = [
@@ -28,6 +43,7 @@ export default function FrontPage() {
   ];
 
   useEffect(() => {
+    // Fetch products from Firestore
     const fetchProducts = async () => {
       try {
         const q = query(
@@ -48,6 +64,43 @@ export default function FrontPage() {
     fetchProducts();
   }, []);
 
+  useEffect(() => {
+    // Fetch current user and profile picture
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        // Fetch user data from Firestore
+        const userDocRef = doc(db, "users", currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setProfilePicture(data.profilePicture || null);
+        } else {
+          console.log("No user data found in Firestore.");
+        }
+      } else {
+        // User is signed out
+        navigation.navigate("Login");
+      }
+    });
+
+    return () => unsubscribe();
+  }, [navigation]);
+
+  useEffect(() => {
+    // Fetch logo URL from Firebase Storage
+    const fetchLogoUrl = async () => {
+      try {
+        const logoRef = ref(storage, "app_assets/logo.jpg"); // Replace with your logo's path in Firebase Storage
+        const url = await getDownloadURL(logoRef);
+        setLogoUrl(url);
+      } catch (error) {
+        console.error("Error fetching logo URL:", error);
+      }
+    };
+    fetchLogoUrl();
+  }, []);
+
   const filteredProducts = products.filter((product) => {
     const matchesCategory = selectedCategory
       ? product.category === selectedCategory
@@ -62,7 +115,32 @@ export default function FrontPage() {
   return (
     <ScrollView style={styles.container}>
       {/* Header */}
-      <Text style={styles.header}>Scholar Swap</Text>
+      <View style={styles.headerContainer}>
+        {logoUrl ? (
+          <Image source={{ uri: logoUrl }} style={styles.logo} />
+        ) : (
+          <Text style={styles.header}>Logo</Text>
+        )}
+        <TouchableOpacity onPress={() => navigation.navigate("Profile")}>
+          {profilePicture ? (
+            <Image
+              source={{ uri: profilePicture }}
+              style={styles.profilePicture}
+            />
+          ) : (
+            <Image
+              source={{
+                uri: "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png",
+              }}
+              style={styles.profilePicture}
+            />
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Centered Title */}
+      <Text style={styles.headerTitle}>Scholar Swap</Text>
+
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <TextInput
@@ -73,6 +151,7 @@ export default function FrontPage() {
           onChangeText={(text) => setSearchQuery(text)}
         />
       </View>
+
       {/* Categories Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Shop by Category</Text>
@@ -106,7 +185,8 @@ export default function FrontPage() {
           ))}
         </ScrollView>
       </View>
-      {/* Featured Products Section */}
+
+      {/* Available Products Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Available Products</Text>
         <View style={styles.productGrid}>
@@ -122,7 +202,9 @@ export default function FrontPage() {
               </Text>
               <TouchableOpacity
                 style={styles.button}
-                onPress={() => navigation.navigate("Product", { id: product.id })}
+                onPress={() =>
+                  navigation.navigate("Product", { id: product.id })
+                }
               >
                 <Text style={styles.buttonText}>View</Text>
               </TouchableOpacity>
@@ -140,23 +222,42 @@ const styles = StyleSheet.create({
     backgroundColor: "#0D0D0D",
     padding: 15,
   },
-  header: {
-    fontSize: 36,
+  headerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+    paddingHorizontal: 15,
+    justifyContent: "space-between",
+  },
+  logo: {
+    width: 150, // Increased size
+    height: 75,
+    resizeMode: "contain",
+  },
+  profilePicture: {
+    width: 75, // Increased size
+    height: 75,
+    borderRadius: 37.5,
+    marginLeft: 10,
+  },
+  headerTitle: {
+    fontSize: 36, // Increased font size
     fontWeight: "bold",
     color: "#FFD700",
     textAlign: "center",
-    marginVertical: 25,
+    marginTop: 10,
+    marginBottom: 20,
   },
   searchContainer: {
     backgroundColor: "#1C1C1C",
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 20,
+    paddingVertical: 15, // Increased padding for larger size
+    paddingHorizontal: 20,
+    borderRadius: 25,
     marginBottom: 20,
   },
-  searchPlaceholder: {
+  searchInput: {
     color: "#FFD700",
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "500",
   },
   section: {
@@ -188,20 +289,26 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontWeight: "500",
   },
+  selectedCategoryButton: {
+    backgroundColor: "#FFD700",
+  },
+  selectedCategoryText: {
+    color: "#000",
+  },
   productGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
   },
   productCard: {
-    backgroundColor: "#FFFFFF", // White background for the product cards
+    backgroundColor: "#FFFFFF",
     padding: 10,
     borderRadius: 10,
-    width: "48%", // Fits two cards per row
+    width: "48%",
     marginBottom: 15,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#E0E0E0", // Light gray border for subtle separation
+    borderColor: "#E0E0E0",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -215,14 +322,14 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: 16,
-    color: "#333", // Dark gray for better contrast
+    color: "#333",
     fontWeight: "500",
     textAlign: "center",
     marginBottom: 4,
   },
   productPrice: {
     fontSize: 14,
-    color: "#666", // Medium gray for price
+    color: "#666",
     marginBottom: 8,
   },
   button: {
@@ -235,16 +342,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#000",
     fontWeight: "600",
-  },
-  searchInput: {
-    color: "#FFD700",
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  selectedCategoryButton: {
-    backgroundColor: "#FFD700",
-  },
-  selectedCategoryText: {
-    color: "#000",
   },
 });

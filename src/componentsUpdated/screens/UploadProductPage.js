@@ -422,7 +422,7 @@ const UploadProductPage = ({ navigation }) => {
               },
             }}
           >
-            {uploading ? <CircularProgress size={24} /> : "Finish"}
+            {uploading ? <CircularProgress size={24} /> : "Post to Scholar Swap"}
           </Button>
         </Box>
 

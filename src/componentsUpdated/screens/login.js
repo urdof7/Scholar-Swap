@@ -72,8 +72,8 @@ export default function Login({ navigation }) {
       }
 
       signIn(); // Update global sign-in state
-      console.log("Navigating to Home screen...");
-      navigation.navigate("Home");
+      console.log("Navigating to FrontPage screen...");
+      navigation.navigate("FrontPage");
     } catch (error) {
       console.error("Email login failed:", error);
       console.log("Error code:", error.code);
@@ -142,8 +142,8 @@ export default function Login({ navigation }) {
         }
 
         signIn(); // Update global sign-in state
-        console.log("Navigating to Home screen after Google login...");
-        navigation.navigate("Home");
+        console.log("Navigating to FrontPage screen after Google login...");
+        navigation.navigate("FrontPage");
       } catch (error) {
         console.error("Error during Firebase Google Sign-In:", error);
         console.log("Error code:", error.code);

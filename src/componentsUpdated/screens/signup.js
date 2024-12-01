@@ -63,8 +63,8 @@ export default function Signup({ navigation }) {
         createdAt: new Date(),
       });
 
-      // Navigate to Home screen or Login screen
-      navigation.navigate('Home');
+      // Navigate to Front screen or Login screen
+      navigation.navigate('FrontPage');
     } catch (error) {
       // Handle errors here
       console.error('Error during sign up:', error);

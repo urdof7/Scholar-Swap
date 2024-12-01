@@ -162,7 +162,7 @@ export default function Profile({ navigation }) {
     <View style={styles.mainContainer}>
       {/* Top Navigation Bar */}
       <View style={styles.navBar}>
-        <Text style={styles.logoText}>MyApp</Text> {/* Replace with your app's name */}
+        <Text style={styles.logoText}>ScholarSwap</Text> {/* Replace with your app's name */}
         <View style={styles.navLinks}>
           <Text style={styles.navLink}>Buy</Text>
           <Text style={styles.navLink}>Sell</Text>

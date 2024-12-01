@@ -19,11 +19,14 @@ import {
   InputLabel,
 } from "@mui/material";
 import { auth, db, storage } from "../../firebase";
-import { collection, addDoc, Timestamp } from "firebase/firestore";
+import { collection, addDoc, Timestamp, doc, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged } from "firebase/auth";
 
-const UploadProductPage = () => {
+// Import TouchableOpacity from react-native-web for web projects
+import { TouchableOpacity, Image, StyleSheet } from "react-native-web";
+
+const UploadProductPage = ({ navigation }) => {
   // State hooks for form fields
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -36,13 +39,25 @@ const UploadProductPage = () => {
 
   // State to manage authenticated user
   const [user, setUser] = useState(null);
+  const [profilePicture, setProfilePicture] = useState(null);
+  const [logoUrl, setLogoUrl] = useState(null);
 
   // Listen for authentication state changes
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         console.log("User is signed in:", currentUser);
         setUser(currentUser);
+
+        // Fetch user data from Firestore
+        const userDocRef = doc(db, "users", currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setProfilePicture(data.profilePicture || null);
+        } else {
+          console.log("No user data found in Firestore.");
+        }
       } else {
         console.log("No user is signed in.");
         setUser(null);
@@ -51,6 +66,20 @@ const UploadProductPage = () => {
 
     // Cleanup subscription on unmount
     return () => unsubscribe();
+  }, []);
+
+  // Fetch logo URL from Firebase Storage
+  useEffect(() => {
+    const fetchLogoUrl = async () => {
+      try {
+        const logoRef = ref(storage, "app_assets/logo.jpg"); // Replace with your logo's path in Firebase Storage
+        const url = await getDownloadURL(logoRef);
+        setLogoUrl(url);
+      } catch (error) {
+        console.error("Error fetching logo URL:", error);
+      }
+    };
+    fetchLogoUrl();
   }, []);
 
   // Handle Finish button click
@@ -135,26 +164,45 @@ const UploadProductPage = () => {
 
   return (
     <Box sx={{ backgroundColor: "#0D0D0D", minHeight: "100vh", py: 4 }}>
-      <Container maxWidth="xl">
-        {/* Header Bar */}
-        <Box
-          sx={{
-            backgroundColor: "#1C1C1C",
-            p: 2,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            borderRadius: 2,
-          }}
-        >
-          <Typography
-            variant="h4"
-            sx={{ color: "#FFD700", fontFamily: "Quicksand, Helvetica" }}
-          >
-            Scholar Swap
-          </Typography>
-        </Box>
+      {/* Top Navigation Bar */}
+      <Box
+        sx={{
+          backgroundColor: "#0A0A0A",
+          p: 2,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          borderRadius: 2,
+        }}
+      >
+        <TouchableOpacity onPress={() => navigation.navigate("FrontPage")}>
+          {logoUrl ? (
+            <img src={logoUrl} alt="Logo" style={{ height: 70 }} /> 
+          ) : (
+            <Typography variant="h6" color="inherit">
+              Logo
+            </Typography>
+          )}
+        </TouchableOpacity>
 
+        <TouchableOpacity onPress={() => navigation.navigate("Profile")}>
+          {profilePicture ? (
+            <img
+              src={profilePicture}
+              alt="Profile"
+              style={{ width: 75, height: 70, borderRadius: "50%" }} // Adjust size here
+            />
+          ) : (
+            <img
+              src="https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"
+              alt="Default Profile"
+              style={{ width: 75, height: 75, borderRadius: "50%" }} // Adjust size here
+            />
+          )}
+        </TouchableOpacity>
+      </Box>
+
+      <Container maxWidth="xl">
         <Typography
           variant="h2"
           sx={{

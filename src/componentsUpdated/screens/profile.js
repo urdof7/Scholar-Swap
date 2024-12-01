@@ -8,9 +8,10 @@ import {
   Image,
   ScrollView,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { auth, db } from '../../firebase'; // Adjust the import path as needed
+import { auth, db, storage } from '../../firebase'; // Adjust the import path as needed
 import {
   doc,
   getDoc,
@@ -27,6 +28,7 @@ import {
   reauthenticateWithCredential,
   EmailAuthProvider,
 } from 'firebase/auth';
+import { getDownloadURL, ref } from 'firebase/storage';
 
 export default function Profile({ navigation }) {
   const [user, setUser] = useState(null); // Firebase Auth user
@@ -47,6 +49,22 @@ export default function Profile({ navigation }) {
   const [listedProducts, setListedProducts] = useState([]); // Products where seller_id == user.uid
   const [orderHistory, setOrderHistory] = useState([]); // Products where buyer_id == user.uid
   const [activeTab, setActiveTab] = useState('listed'); // For tab switching
+
+  const [logoUrl, setLogoUrl] = useState(null); // For logo image URL
+
+  useEffect(() => {
+    // Fetch logo URL from Firebase Storage
+    const fetchLogoUrl = async () => {
+      try {
+        const logoRef = ref(storage, 'app_assets/logo.jpg'); // Replace with your logo's path in Firebase Storage
+        const url = await getDownloadURL(logoRef);
+        setLogoUrl(url);
+      } catch (error) {
+        console.error('Error fetching logo URL:', error);
+      }
+    };
+    fetchLogoUrl();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -213,11 +231,18 @@ export default function Profile({ navigation }) {
     <View style={styles.mainContainer}>
       {/* Top Navigation Bar */}
       <View style={styles.navBar}>
-        <Text style={styles.logoText}>ScholarSwap</Text> {/* Replace with your app's name */}
+        {logoUrl ? (
+          <Image source={{ uri: logoUrl }} style={styles.logoImage} />
+        ) : (
+          <ActivityIndicator size="small" color="#FFD700" />
+        )}
         <View style={styles.navLinks}>
-          <Text style={styles.navLink}>Buy</Text>
-          <Text style={styles.navLink}>Sell</Text>
-          <Text style={styles.navLink}>About Us</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('FrontPage')}>
+            <Text style={styles.navLink}>Buy</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('UploadProduct')}>
+            <Text style={styles.navLink}>Sell</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -443,7 +468,7 @@ export default function Profile({ navigation }) {
                 <Text style={styles.placeholderText}>
                   You haven't listed any products yet -{' '}
                 </Text>
-                <TouchableOpacity onPress={() => navigation.navigate('UploadProductPage')}>
+                <TouchableOpacity onPress={() => navigation.navigate('UploadProduct')}>
                   <Text style={styles.linkText}>List a Product</Text>
                 </TouchableOpacity>
               </View>
@@ -498,10 +523,10 @@ const styles = StyleSheet.create({
     padding: 15,
     backgroundColor: '#000', // Black background for nav bar
   },
-  logoText: {
-    fontSize: 24,
-    color: '#FFD700', // Gold color
-    fontWeight: 'bold',
+  logoImage: {
+    width: 120, // Adjust as needed
+    height: 60,
+    resizeMode: 'contain',
   },
   navLinks: {
     flexDirection: 'row',

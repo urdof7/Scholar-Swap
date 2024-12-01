@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import UploadIcon from "@mui/icons-material/Upload";
 import {
   Box,
@@ -18,9 +18,10 @@ import {
   FormControl,
   InputLabel,
 } from "@mui/material";
-import { auth, db, storage } from "../../firebase"; // Adjusted import path
+import { auth, db, storage } from "../../firebase";
 import { collection, addDoc, Timestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { onAuthStateChanged } from "firebase/auth";
 
 const UploadProductPage = () => {
   // State hooks for form fields
@@ -32,14 +33,37 @@ const UploadProductPage = () => {
   const [openConfirmation, setOpenConfirmation] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  // Get the current user
-  const user = auth.currentUser;
+  // State to manage authenticated user
+  const [user, setUser] = useState(null);
+
+  // Listen for authentication state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        console.log("User is signed in:", currentUser);
+        setUser(currentUser);
+      } else {
+        console.log("No user is signed in.");
+        setUser(null);
+      }
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []);
 
   // Handle Finish button click
   const handleFinish = async () => {
+    console.log("Starting product upload...");
+
     // Validate that all fields are filled
     if (!title || !description || !category || !imageFile) {
       alert("Please fill in all fields.");
+      return;
+    }
+
+    if (!user) {
+      alert("You must be logged in to upload a product.");
       return;
     }
 
@@ -47,11 +71,16 @@ const UploadProductPage = () => {
 
     try {
       // Upload image to Firebase Storage
+      console.log("Uploading image...");
       const storageRef = ref(storage, `products/${imageFile.name}_${Date.now()}`);
       await uploadBytes(storageRef, imageFile);
+      console.log("Image uploaded successfully.");
+
       const imageUrl = await getDownloadURL(storageRef);
+      console.log("Image URL:", imageUrl);
 
       // Create product document in Firestore
+      console.log("Adding product to Firestore...");
       await addDoc(collection(db, "products"), {
         seller_id: user.uid,
         buyer_id: null,
@@ -59,13 +88,15 @@ const UploadProductPage = () => {
         description: description,
         image: imageUrl,
         category: category,
-        status: "available", // Added status field
+        status: "available",
         postedAt: Timestamp.now(),
         purchasedAt: null,
       });
+      console.log("Product added to Firestore successfully.");
 
       setUploading(false);
       setOpenConfirmation(true);
+
       // Reset the form fields
       setTitle("");
       setDescription("");
@@ -83,13 +114,12 @@ const UploadProductPage = () => {
     setOpenConfirmation(false);
   };
 
-  // Category options
+  // Updated category options
   const categories = [
     "Textbooks",
-    "Lecture Notes",
-    "Past Exams",
-    "Lab Manuals",
-    "eBooks",
+    "Lab Materials",
+    "Clothes",
+    "Dorm Supplies",
     "Other",
   ];
 
@@ -288,28 +318,7 @@ const UploadProductPage = () => {
           </Grid>
         </Grid>
 
-        <Box sx={{ display: "flex", gap: 2, mt: 4 }}>
-          <Button
-            variant="contained"
-            disabled={uploading}
-            sx={{
-              backgroundColor: "#FFD700",
-              color: "#000",
-              borderRadius: 2,
-              "&:hover": {
-                backgroundColor: "#FFC700",
-              },
-            }}
-            onClick={() => {
-              // Optionally reset form or navigate to another page
-              setTitle("");
-              setDescription("");
-              setCategory("");
-              setImageFile(null);
-            }}
-          >
-            Upload more products
-          </Button>
+        <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 4 }}>
           <Button
             variant="contained"
             onClick={handleFinish}

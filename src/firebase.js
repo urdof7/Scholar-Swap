@@ -11,7 +11,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyCSRSkp7Z8CVszE9MmA4TSozK1dcD8JtO4",
   authDomain: "scholar-swap-439312.firebaseapp.com",
   projectId: "scholar-swap-439312",
-  storageBucket: "scholar-swap-439312.appspot.com",
+  storageBucket: "scholar-swap-439312.firebasestorage.app", // Update to match the bucket
   messagingSenderId: "101931362137",
   appId: "1:101931362137:web:6ce3f3a29f465fc9858e48",
   measurementId: "G-KJ53HFVD5T",

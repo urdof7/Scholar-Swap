@@ -1,57 +1,73 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Image,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { db } from '../../firebase'; // Adjust the path if necessary
+import { doc, getDoc } from 'firebase/firestore';
 
-export default function Product() {
-  const navigation = useNavigation();
+export default function Product({ route, navigation }) {
+  const { id } = route.params;
 
-  // Fake product data
-  const fakeProducts = [
-    { id: 1, name: 'Introduction to Algorithms', description: 'A comprehensive book on algorithms.', price: 59.99 },
-    { id: 2, name: 'Data Structures and Algorithms in Python', description: 'Learn data structures in Python.', price: 45.50 },
-    { id: 3, name: 'Clean Code', description: 'A Handbook of Agile Software Craftsmanship.', price: 39.99 },
-    { id: 4, name: 'The Pragmatic Programmer', description: 'Your journey to mastery.', price: 49.99 },
-    { id: 5, name: 'Design Patterns: Elements of Reusable Object-Oriented Software', description: 'A book on software design patterns.', price: 54.99 },
-    { id: 6, name: 'The Art of Computer Programming', description: 'A collection of books on algorithms and mathematical computing.', price: 199.99 },
-  ];
-
-  const [products, setProducts] = useState([]);
+  const [product, setProduct] = useState(null);
 
   useEffect(() => {
-    // Simulate fetching product data from an API
-    setTimeout(() => {
-      setProducts(fakeProducts);
-    }, 1000); // Simulating a delay
-  }, []);
+    // Fetch product data from Firebase
+    const fetchProduct = async () => {
+      try {
+        const docRef = doc(db, 'products', id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setProduct({ id: docSnap.id, ...docSnap.data() });
+        } else {
+          console.log('No such document!');
+        }
+      } catch (error) {
+        console.error('Error fetching product:', error);
+      }
+    };
+    fetchProduct();
+  }, [id]);
 
-  if (products.length === 0) {
+  if (!product) {
     return (
       <View style={styles.container}>
-        <Text style={styles.loadingText}>Loading products...</Text>
+        <Text style={styles.loadingText}>Loading product...</Text>
       </View>
     );
   }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {products.map((product) => (
-        <View key={product.id} style={styles.productContainer}>
-          <Text style={styles.productName}>{product.name}</Text>
-          <Text style={styles.productDescription}>{product.description}</Text>
-          <Text style={styles.productPrice}>Price: ${product.price}</Text>
+      <View style={styles.productContainer}>
+        {product.image && (
+          <Image source={{ uri: product.image }} style={styles.productImage} />
+        )}
+        <Text style={styles.productName}>{product.title}</Text>
+        <Text style={styles.productDescription}>{product.description}</Text>
+        <Text style={styles.productPrice}>
+          Price: ${product.price ? product.price.toFixed(2) : 'N/A'}
+        </Text>
 
-          <TouchableOpacity style={styles.button} onPress={() => console.log('Messaging Seller')}>
-            <Text style={styles.buttonText}>Message Seller</Text>
-          </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => console.log('Messaging Seller')}
+        >
+          <Text style={styles.buttonText}>Message Seller</Text>
+        </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.buyButton}
-            onPress={() => navigation.navigate('transactions.jsx', { product })}
-          >
-            <Text style={styles.buttonText}>Buy Now</Text>
-          </TouchableOpacity>
-        </View>
-      ))}
+        <TouchableOpacity
+          style={styles.buyButton}
+          onPress={() => navigation.navigate('transactions.jsx', { product })}
+        >
+          <Text style={styles.buttonText}>Buy Now</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 }
@@ -71,6 +87,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     width: '100%',
     alignItems: 'center',
+  },
+  productImage: {
+    width: 200,
+    height: 200,
+    marginBottom: 15,
+    borderRadius: 10,
   },
   productName: {
     fontSize: 24,

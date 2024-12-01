@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,44 +6,73 @@ import {
   StyleSheet,
   ScrollView,
   Image,
+  TextInput,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { db } from "../../firebase";
+import { collection, getDocs, query, where } from "firebase/firestore";
 
-export default function FrontPage({ navigation }) {
-  // Sample categories and products
-  const categories = ["Electronics", "Books", "Fashion", "Home", "Toys"];
-  const featuredProducts = [
-    {
-      id: 1,
-      name: "Apple iPhone 12",
-      price: 799.99,
-      image:
-        "https://encrypted-tbn0.gstatic.com/shopping?q=tbn:ANd9GcTDlrXqfP3VWousLRXVN9HDG5-JqIppcI91kNr4a9FizfmNRz4CN-ROyGEgvcU&usqp=CAc",
-    },
-    {
-      id: 2,
-      name: "Lab Coat",
-      price: 13.99,
-      image:
-        "https://i.ebayimg.com/thumbs/images/g/YGoAAOSwUd1kemdg/s-l1200.jpg",
-    },
-    {
-      id: 3,
-      name: "MacBook Pro",
-      price: 1299.99,
-      image: "https://i.ebayimg.com/images/g/ntoAAOSwIetir7mU/s-l400.jpg",
-    },
+export default function FrontPage() {
+  const navigation = useNavigation();
+  const [products, setProducts] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Adjusted categories to match the UploadProductPage
+  const categories = [
+    "Textbooks",
+    "Lab Materials",
+    "Clothes",
+    "Dorm Supplies",
+    "Other",
   ];
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const q = query(
+          collection(db, "products"),
+          where("status", "==", "available")
+        );
+        const querySnapshot = await getDocs(q);
+        const productsData = [];
+        querySnapshot.forEach((doc) => {
+          productsData.push({ id: doc.id, ...doc.data() });
+        });
+        setProducts(productsData);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  const filteredProducts = products.filter((product) => {
+    const matchesCategory = selectedCategory
+      ? product.category === selectedCategory
+      : true;
+    const matchesSearchQuery = searchQuery
+      ? product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.description.toLowerCase().includes(searchQuery.toLowerCase())
+      : true;
+    return matchesCategory && matchesSearchQuery;
+  });
 
   return (
     <ScrollView style={styles.container}>
       {/* Header */}
       <Text style={styles.header}>Scholar Swap</Text>
-
       {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <Text style={styles.searchPlaceholder}>Search Your Class or Materials</Text>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search Your Class or Materials"
+          placeholderTextColor="#FFD700"
+          value={searchQuery}
+          onChangeText={(text) => setSearchQuery(text)}
+        />
       </View>
-
       {/* Categories Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Shop by Category</Text>
@@ -55,27 +84,42 @@ export default function FrontPage({ navigation }) {
           {categories.map((category, index) => (
             <TouchableOpacity
               key={index}
-              style={styles.categoryButton}
-              onPress={() => console.log(`Browsing ${category}`)}
+              style={[
+                styles.categoryButton,
+                selectedCategory === category && styles.selectedCategoryButton,
+              ]}
+              onPress={() => {
+                setSelectedCategory(
+                  selectedCategory === category ? null : category
+                );
+              }}
             >
-              <Text style={styles.categoryText}>{category}</Text>
+              <Text
+                style={[
+                  styles.categoryText,
+                  selectedCategory === category && styles.selectedCategoryText,
+                ]}
+              >
+                {category}
+              </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
-
       {/* Featured Products Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Most Popular Products</Text>
+        <Text style={styles.sectionTitle}>Available Products</Text>
         <View style={styles.productGrid}>
-          {featuredProducts.map((product) => (
+          {filteredProducts.map((product) => (
             <View key={product.id} style={styles.productCard}>
               <Image
                 source={{ uri: product.image }}
                 style={styles.productImage}
               />
-              <Text style={styles.productName}>{product.name}</Text>
-              <Text style={styles.productPrice}>${product.price.toFixed(2)}</Text>
+              <Text style={styles.productName}>{product.title}</Text>
+              <Text style={styles.productPrice}>
+                ${product.price ? product.price.toFixed(2) : "N/A"}
+              </Text>
               <TouchableOpacity
                 style={styles.button}
                 onPress={() => navigation.navigate("Product", { id: product.id })}
@@ -191,5 +235,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#000",
     fontWeight: "600",
+  },
+  searchInput: {
+    color: "#FFD700",
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  selectedCategoryButton: {
+    backgroundColor: "#FFD700",
+  },
+  selectedCategoryText: {
+    color: "#000",
   },
 });

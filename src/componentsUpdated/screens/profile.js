@@ -1,5 +1,3 @@
-// Profile.js
-
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -12,7 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { auth, db, storage } from '../../firebase'; // Adjust the import path as needed
+import { auth, db, storage } from '../../firebase';
 import {
   doc,
   getDoc,
@@ -23,6 +21,7 @@ import {
   getDocs,
   orderBy,
   onSnapshot,
+  arrayRemove,
 } from 'firebase/firestore';
 import {
   onAuthStateChanged,
@@ -34,34 +33,35 @@ import {
 import { getDownloadURL, ref } from 'firebase/storage';
 
 export default function Profile({ navigation }) {
-  const [user, setUser] = useState(null); // Firebase Auth user
-  const [profileData, setProfileData] = useState(null); // Firestore user data
-  const [isEditingProfile, setIsEditingProfile] = useState(false); // Toggle edit mode
-  const [isChangingPassword, setIsChangingPassword] = useState(false); // Toggle password change mode
-  const [firstName, setFirstName] = useState(''); // For first name
-  const [lastName, setLastName] = useState(''); // For last name
-  const [academicYear, setAcademicYear] = useState(''); // For academic year
-  const [email, setEmail] = useState(''); // For email
-  const [currentPassword, setCurrentPassword] = useState(''); // For current password
-  const [newPassword, setNewPassword] = useState(''); // For new password
-  const [confirmNewPassword, setConfirmNewPassword] = useState(''); // For confirm new password
-  const [errorMessage, setErrorMessage] = useState(''); // For error messages
-  const [successMessage, setSuccessMessage] = useState(''); // For success messages
-  const [profilePicture, setProfilePicture] = useState(''); // For profile picture URL
+  const [user, setUser] = useState(null);
+  const [profileData, setProfileData] = useState(null);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [academicYear, setAcademicYear] = useState('');
+  const [email, setEmail] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [profilePicture, setProfilePicture] = useState('');
 
-  const [listedProducts, setListedProducts] = useState([]); // Products where seller_id == user.uid
-  const [orderHistory, setOrderHistory] = useState([]); // Products where buyer_id == user.uid
-  const [activeTab, setActiveTab] = useState('listed'); // For tab switching
+  const [listedProducts, setListedProducts] = useState([]);
+  const [orderHistory, setOrderHistory] = useState([]);
+  const [bookmarkedProducts, setBookmarkedProducts] = useState([]); // New state for bookmarked products
+  const [activeTab, setActiveTab] = useState('listed');
 
-  const [logoUrl, setLogoUrl] = useState(null); // For logo image URL
+  const [logoUrl, setLogoUrl] = useState(null);
 
-  const [conversations, setConversations] = useState([]); // For chats
+  const [conversations, setConversations] = useState([]);
 
   useEffect(() => {
     // Fetch logo URL from Firebase Storage
     const fetchLogoUrl = async () => {
       try {
-        const logoRef = ref(storage, 'app_assets/logo.jpg'); // Replace with your logo's path in Firebase Storage
+        const logoRef = ref(storage, 'app_assets/logo.jpg');
         const url = await getDownloadURL(logoRef);
         setLogoUrl(url);
       } catch (error) {
@@ -75,7 +75,7 @@ export default function Profile({ navigation }) {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        setEmail(currentUser.email); // Set current email in state
+        setEmail(currentUser.email);
         // Fetch additional user data from Firestore
         const userDocRef = doc(db, 'users', currentUser.uid);
         const userDoc = await getDoc(userDocRef);
@@ -131,6 +131,32 @@ export default function Profile({ navigation }) {
         }
       };
 
+      // Fetch bookmarked products
+      const fetchBookmarkedProducts = async () => {
+        try {
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDocSnap = await getDoc(userDocRef);
+          if (userDocSnap.exists()) {
+            const data = userDocSnap.data();
+            const bookmarks = data.bookmarked_products || [];
+            if (bookmarks.length > 0) {
+              const productsRef = collection(db, 'products');
+              const q = query(productsRef, where('__name__', 'in', bookmarks));
+              const querySnapshot = await getDocs(q);
+              const products = [];
+              querySnapshot.forEach((doc) => {
+                products.push({ id: doc.id, ...doc.data() });
+              });
+              setBookmarkedProducts(products);
+            } else {
+              setBookmarkedProducts([]);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching bookmarked products:', error);
+        }
+      };
+
       // Fetch conversations
       const fetchConversations = () => {
         const conversationsRef = collection(db, 'conversations');
@@ -178,6 +204,7 @@ export default function Profile({ navigation }) {
 
       fetchListedProducts();
       fetchOrderHistory();
+      fetchBookmarkedProducts();
       fetchConversations();
     }
   }, [user]);
@@ -275,6 +302,22 @@ export default function Profile({ navigation }) {
     } catch (error) {
       console.error('Error signing out:', error);
       setErrorMessage('An error occurred while signing out.');
+    }
+  };
+
+  // Function to remove a product from bookmarks
+  const removeBookmark = async (productId) => {
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        bookmarked_products: arrayRemove(productId),
+      });
+      // Update local state
+      setBookmarkedProducts((prevProducts) =>
+        prevProducts.filter((product) => product.id !== productId)
+      );
+    } catch (error) {
+      console.error('Error removing bookmark:', error);
     }
   };
 
@@ -471,6 +514,46 @@ export default function Profile({ navigation }) {
           )}
         </View>
 
+        {/* Bookmarked Products Section */}
+        <View style={styles.bookmarkedSection}>
+          <Text style={styles.sectionTitle}>Bookmarked Products</Text>
+          {bookmarkedProducts.length > 0 ? (
+            bookmarkedProducts.map((product) => (
+              <View key={product.id} style={styles.productItem}>
+                <TouchableOpacity
+                  style={styles.productInfo}
+                  onPress={() => navigation.navigate('Product', { id: product.id })}
+                >
+                  {product.image && (
+                    <Image style={styles.productImage} source={{ uri: product.image }} />
+                  )}
+                  <View style={styles.productDetails}>
+                    <Text style={styles.productName}>{product.title}</Text>
+                    <Text style={styles.productPrice}>
+                      ${product.price ? product.price.toFixed(2) : 'N/A'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.removeButton}
+                  onPress={() => removeBookmark(product.id)}
+                >
+                  <Text style={styles.removeButtonText}>X</Text>
+                </TouchableOpacity>
+              </View>
+            ))
+          ) : (
+            <View style={styles.placeholderContainer}>
+              <Text style={styles.placeholderText}>
+                You haven't bookmarked any products yet -{' '}
+              </Text>
+              <TouchableOpacity onPress={() => navigation.navigate('FrontPage')}>
+                <Text style={styles.linkText}>Browse Products</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
         {/* Chat Section */}
         <View style={styles.chatSection}>
           <Text style={styles.sectionTitle}>Chats</Text>
@@ -521,7 +604,11 @@ export default function Profile({ navigation }) {
           {activeTab === 'listed' ? (
             listedProducts.length > 0 ? (
               listedProducts.map((product) => (
-                <View key={product.id} style={styles.productItem}>
+                <TouchableOpacity
+                  key={product.id}
+                  style={styles.productItem}
+                  onPress={() => navigation.navigate('Product', { id: product.id })}
+                >
                   {product.image && (
                     <Image style={styles.productImage} source={{ uri: product.image }} />
                   )}
@@ -532,7 +619,7 @@ export default function Profile({ navigation }) {
                     </Text>
                     <Text style={styles.productStatus}>Status: {product.status}</Text>
                   </View>
-                </View>
+                </TouchableOpacity>
               ))
             ) : (
               <View style={styles.placeholderContainer}>
@@ -547,7 +634,11 @@ export default function Profile({ navigation }) {
           ) : activeTab === 'orders' ? (
             orderHistory.length > 0 ? (
               orderHistory.map((order) => (
-                <View key={order.id} style={styles.productItem}>
+                <TouchableOpacity
+                  key={order.id}
+                  style={styles.productItem}
+                  onPress={() => navigation.navigate('Product', { id: order.id })}
+                >
                   {order.image && (
                     <Image style={styles.productImage} source={{ uri: order.image }} />
                   )}
@@ -558,7 +649,7 @@ export default function Profile({ navigation }) {
                     </Text>
                     <Text style={styles.productStatus}>Status: {order.status}</Text>
                   </View>
-                </View>
+                </TouchableOpacity>
               ))
             ) : (
               <View style={styles.placeholderContainer}>
@@ -585,17 +676,17 @@ export default function Profile({ navigation }) {
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
-    backgroundColor: '#222', // Dark background
+    backgroundColor: '#222',
   },
   navBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 15,
-    backgroundColor: '#000', // Black background for nav bar
+    backgroundColor: '#000',
   },
   logoImage: {
-    width: 120, // Adjust as needed
+    width: 120,
     height: 60,
     resizeMode: 'contain',
   },
@@ -604,7 +695,7 @@ const styles = StyleSheet.create({
   },
   navLink: {
     fontSize: 18,
-    color: '#FFD700', // Gold text
+    color: '#FFD700',
     marginHorizontal: 15,
   },
   container: {
@@ -616,15 +707,15 @@ const styles = StyleSheet.create({
     marginVertical: 20,
   },
   profileImage: {
-    width: 120, // Increased size
+    width: 120,
     height: 120,
     borderRadius: 60,
     marginBottom: 10,
   },
   profileName: {
-    fontSize: 24, // Increased font size
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#FFD700', // Gold color
+    color: '#FFD700',
   },
   universityInfo: {
     fontSize: 16,
@@ -662,16 +753,16 @@ const styles = StyleSheet.create({
   picker: {
     height: 50,
     color: '#FFF',
-    backgroundColor: '#333', // Dark background for picker
+    backgroundColor: '#333',
   },
   profileButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 20,
-    width: '15%',
+    width: '100%',
   },
   saveButton: {
-    backgroundColor: '#28a745', // Green
+    backgroundColor: '#28a745',
     paddingVertical: 10,
     paddingHorizontal: 10,
     borderRadius: 5,
@@ -679,14 +770,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cancelButton: {
-    backgroundColor: '#dc3545', // Red
+    backgroundColor: '#dc3545',
     paddingVertical: 10,
     paddingHorizontal: 10,
     borderRadius: 5,
     flex: 1,
   },
   editButton: {
-    backgroundColor: '#007bff', // Blue
+    backgroundColor: '#007bff',
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 5,
@@ -694,7 +785,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   changePasswordButton: {
-    backgroundColor: '#6c757d', // Grey
+    backgroundColor: '#6c757d',
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 5,
@@ -717,6 +808,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   chatSection: {
+    backgroundColor: '#333',
+    padding: 15,
+    borderRadius: 10,
+    marginTop: 20,
+  },
+  bookmarkedSection: {
     backgroundColor: '#333',
     padding: 15,
     borderRadius: 10,
@@ -784,6 +881,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 15,
+    position: 'relative',
+  },
+  productInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   productImage: {
     width: 50,
@@ -824,12 +927,22 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   signOutButton: {
-    backgroundColor: '#dc3545', // Red
+    backgroundColor: '#dc3545',
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 5,
     alignSelf: 'center',
     marginTop: 20,
     marginBottom: 30,
+  },
+  removeButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeButtonText: {
+    fontSize: 20,
+    color: '#dc3545',
   },
 });

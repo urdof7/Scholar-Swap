@@ -17,6 +17,13 @@ import {
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "../../firebase";
 
+
+const provider = new GoogleAuthProvider();
+provider.setCustomParameters({
+  client_id: "863926647713-hq4splkoh97hkatr46ind0pnmf63k6km.apps.googleusercontent.com", // Use your OAuth Client ID
+});
+
+
 const DEFAULT_PROFILE_PICTURE = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
 
 // Helper function to split full name into first and last names

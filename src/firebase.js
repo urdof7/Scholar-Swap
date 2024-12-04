@@ -31,14 +31,15 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getFirestore } from "firebase/firestore";
+import { getAuth } from "firebase/auth"; // Import Firebase Auth
+import { getStorage } from "firebase/storage"; // Import Firebase Storage
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyCbedHOBfmzS4opRuGDtKF9BmSVzQZLHpI",
-  authDomain: "scholar-swap-demo.firebaseapp.com",
+  authDomain: "scholar-swap-demo.web.app",
   projectId: "scholar-swap-demo",
   storageBucket: "scholar-swap-demo.firebasestorage.app",
   messagingSenderId: "863926647713",
@@ -49,3 +50,7 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
+const db = getFirestore(app); // Initialize Firestore
+const auth = getAuth(app); // Initialize Auth
+const storage = getStorage(app); // Initialize Storage
+export { db, auth, storage };

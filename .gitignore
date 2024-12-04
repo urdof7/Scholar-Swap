@@ -3,6 +3,7 @@
 
 # Add firebase.js to ignore it
 firebase.js
+firebase-jey.json
 
 
 # dependencies

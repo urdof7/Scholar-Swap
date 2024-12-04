@@ -1,5 +1,10 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+
+# Add firebase.js to ignore it
+firebase.js
+
+
 # dependencies
 /node_modules
 /.pnp

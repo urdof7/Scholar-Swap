@@ -1,6 +1,7 @@
 {
   "projects": {
-    "staging": "scholar-swap-439312"
+    "staging": "scholar-swap-439312",
+    "default": "scholar-swap-439312"
   },
   "targets": {},
   "etags": {}
